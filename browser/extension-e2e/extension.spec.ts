@@ -53,6 +53,17 @@ async function openPanel() {
 
 const isPaused = () => page.locator('video').evaluate(video => (video as HTMLVideoElement).paused);
 
+async function reloadPanel() {
+  const frame = await panel.send<{ frameTree: { frame: { loaderId: string } } }>('Page.getFrameTree');
+  await panel.send('Page.reload');
+  // Page.reload acknowledges before navigation completes. Wait for the new
+  // document so readiness checks cannot accidentally match the outgoing DOM.
+  await expect.poll(async () => {
+    const next = await panel.send<{ frameTree: { frame: { loaderId: string } } }>('Page.getFrameTree');
+    return next.frameTree.frame.loaderId;
+  }).not.toBe(frame.frameTree.frame.loaderId);
+}
+
 test('first-time native camera permission opens a window and cancellation leaves the camera off', async () => {
   await openPanel();
   const created = context.waitForEvent('page', { timeout: 8000 });
@@ -128,7 +139,7 @@ test('native camera permission window closes when the initiating panel reloads',
   await panel.click('.extension-camera > button.primary');
   const permission = await created;
   await expect(permission).toHaveURL(new RegExp(`^chrome-extension://${extensionId}/camera-permission.html`));
-  await panel.send('Page.reload');
+  await reloadPanel();
   await expect.poll(() => permission.isClosed()).toBe(true);
   await expect.poll(() => panel.evaluate<string>('document.querySelector(".tracking-status")?.textContent')).toBe('Camera off');
   expect(await panel.evaluate('document.querySelector("video").srcObject')).toBeNull();
@@ -205,9 +216,9 @@ test('reloading the panel starts a usable observation stream after a long previo
     return chrome.runtime.sendMessage({channel:'stillpoint-extension-v1',type:'POSE',token:saved.stillpointSession.token,observation:{pose:'facing',capturedAt:performance.timeOrigin+performance.now(),sequence:999999}});
   })()`);
   expect(seeded.ok).toBe(true);
-  await panel.send('Page.reload');
+  await reloadPanel();
   await expect.poll(() => panel.evaluate<string>('document.querySelector("h1")?.textContent')).toBe('Your video, at your pace.');
-  await expect.poll(() => panel.evaluate<boolean>('!document.querySelector(".extension-camera > button.outline")?.disabled')).toBe(true);
+  await expect.poll(() => panel.evaluate<boolean>('document.querySelector(".extension-camera > button.outline")?.disabled === false')).toBe(true);
   await panel.click('.extension-camera > button.outline');
   await panel.click('.pose-buttons button:nth-child(2)');
   await expect.poll(isPaused, { timeout: 4500 }).toBe(true);
