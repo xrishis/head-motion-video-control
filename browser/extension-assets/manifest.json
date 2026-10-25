@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Stillpoint — hands-free video",
+  "version": "0.2.0",
+  "description": "Optional head-controlled pause and resume for a selected video tab. Local camera processing and learner-controlled playback.",
+  "minimum_chrome_version": "116",
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": {
+    "default_title": "Open Stillpoint for this video tab",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" }
+  },
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "side_panel": { "default_path": "panel.html" },
+  "commands": { "_execute_action": { "suggested_key": { "default": "Alt+Shift+S" } } },
+  "content_security_policy": { "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self'; worker-src 'self';" }
+}

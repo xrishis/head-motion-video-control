@@ -1,0 +1,39 @@
+body { background: #f7f8f6; min-width: 280px; }
+.extension-panel { padding: 20px 20px 14px; max-width: 520px; margin: auto; }
+.extension-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 17px; border-bottom: 1px solid var(--line); gap: 8px; }
+.extension-header .brand { font-size: 23px; gap: 10px; }
+.extension-header .brand-mark i { width: 6px; height: 22px; }
+.extension-version { font-size: 10px; color: #819087; white-space: nowrap; }
+.extension-intro { padding: 24px 0 21px; }
+.extension-intro h1 { margin: 0 0 8px; font-size: 24px; letter-spacing: -.7px; line-height: 1.3; }
+.extension-intro p { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 0; }
+.target-section { border: 1px solid var(--line); border-radius: 11px; background: #fff; padding: 15px; }
+.section-label { display: flex; justify-content: space-between; align-items: center; }
+.section-label h2 { font-size: 12px; font-weight: 600; color: #6e7e74; margin: 0 0 12px; }
+.connection-dot { height: 7px; width: 7px; border-radius: 50%; background: #c7cfca; margin-top: -12px; }
+.connection-dot.connected { background: #25a57b; box-shadow: 0 0 0 3px #25a57b13; }
+.target-name { display: block; font-size: 14px; font-weight: 650; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.target-host { font-size: 10px; color: #829087; margin-top: 4px; display: block; }
+.target-message { font-size: 11px; color: #65756c; line-height: 1.65; margin: 10px 0; }
+.target-controls { display: flex; gap: 6px; }
+.target-controls button { border: 1px solid #d7e2d9; color: #315c4c; background: #f6faf5; border-radius: 6px; display: flex; flex: 1; align-items: center; justify-content: center; gap: 5px; padding: 9px 4px; font-size: 11px; }
+.target-controls button:hover { background: #eaf3eb; }
+.allow-site { font-size: 10px; margin-top: 8px; }
+.extension-pending { font-size: 10px; color: #3f7058; margin-top: 8px; }
+.extension-camera { margin-top: 23px; }
+.extension-camera > h2 { font-size: 17px; margin: 0 0 12px; font-weight: 650; letter-spacing: -.2px; }
+.extension-camera .camera-preview { aspect-ratio: 16/9; }
+.extension-camera .simulation-controls { margin-top: 12px; }
+.extension-panel .preferences { padding-top: 20px; margin-top: 23px; }
+.extension-panel .preferences h3 { font-size: 17px; }
+.extension-panel .preference-field label, .extension-panel .select-row label { font-size: 12px; }
+.extension-panel .field-help, .extension-panel .camera-privacy { font-size: 10px; }
+.extension-panel .preference-field { margin-bottom: 22px; }
+.extension-panel .pose-buttons button { font-size: 11px; }
+.extension-panel .switch-row label { display: inline; }
+.extension-help { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 15px; }
+.extension-help summary { color: #5d7064; font-size: 11px; cursor: pointer; }
+.extension-help p { font-size: 11px; color: #7a887f; line-height: 1.75; }
+.extension-help p svg { vertical-align: middle; margin-right: 3px; }
+.extension-footer { color: #849187; font-size: 10px; display: flex; align-items: center; justify-content: center; gap: 5px; margin: 23px 0 5px; }
+@media (min-width: 420px) { .extension-panel { padding-left: 24px; padding-right: 24px; } }

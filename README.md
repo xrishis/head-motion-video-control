@@ -4,6 +4,8 @@ A browser MVP for training companies: learners can optionally pause a video by t
 
 **[Open the browser demo](https://xrishis.github.io/head-motion-video-control/)** · **[Source repository](https://github.com/xrishis/head-motion-video-control)**
 
+**[Download the Chrome/Edge extension](https://github.com/xrishis/head-motion-video-control/releases/download/extension-v0.2.0/stillpoint-extension-v0.2.0.zip)** · [Installation and compatibility](EXTENSION.md)
+
 The product is a playback assistant. Head orientation does not establish attention, comprehension, attendance, or completion.
 
 ## Run the browser demo
@@ -75,6 +77,7 @@ npm run preview
 ## Build prompt and design
 
 - [Reusable execution prompt](BUILD_PROMPT.md)
+- [Extension execution prompt](EXTENSION_BUILD_PROMPT.md)
 - [Product specification](docs/superpowers/specs/2026-10-25-browser-mvp-design.md)
 - [Implementation plan](docs/superpowers/plans/2026-10-25-browser-mvp.md)
 - [Primary-screen visual concept](docs/design/stillpoint-concept.png)

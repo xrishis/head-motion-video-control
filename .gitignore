@@ -10,3 +10,5 @@ browser/test-results/
 browser/playwright-report/
 browser/.vite/
 *.tsbuildinfo
+browser/extension-dist/
+browser/artifacts/

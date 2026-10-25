@@ -32,6 +32,12 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - run: npm run package:extension
+      - run: npm run test:extension
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stillpoint-extension
+          path: browser/artifacts/stillpoint-extension-v0.2.0.zip
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:
