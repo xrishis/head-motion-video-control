@@ -1,0 +1,9 @@
+camera:
+  device_index: 0
+
+pose_estimation:
+  angle_threshold: 30
+
+video_control:
+  pause_key: 'space'
+  play_key: 'space'

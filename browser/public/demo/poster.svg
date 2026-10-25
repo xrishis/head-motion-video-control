@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title description">
+  <title id="title">Make space for focused learning</title>
+  <desc id="description">An original Stillpoint practice lesson poster with forest green and sage circles on a pale neutral background. Demo lesson, one minute.</desc>
+  <rect width="1280" height="720" fill="#f1f3ef"/>
+  <ellipse cx="-55" cy="165" rx="375" ry="385" fill="#214e45"/>
+  <circle cx="1110" cy="138" r="80" fill="#bdcaba"/>
+  <circle cx="1285" cy="865" r="385" fill="#d1dbcf"/>
+  <g text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" fill="#193d36">
+    <text x="700" y="309" font-size="62" font-weight="700">Make space for</text>
+    <text x="700" y="381" font-size="62" font-weight="700">focused learning</text>
+    <text x="700" y="447" font-size="26" fill="#536c64">Demo lesson · 01:00</text>
+  </g>
+</svg>
