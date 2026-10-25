@@ -2,7 +2,7 @@ import type { PolicySettings, PoseState } from '../core/playbackPolicy';
 
 export const CHANNEL = 'stillpoint-extension-v1' as const;
 export const MAX_SIGNAL_AGE_MS = 350;
-export const EXTENSION_VERSION = '0.2.0';
+export const EXTENSION_VERSION = '0.2.1';
 export type Sensitivity = 'relaxed' | 'balanced' | 'sensitive';
 export interface ExtensionSettings extends PolicySettings { sensitivity: Sensitivity }
 export const DEFAULT_SETTINGS: ExtensionSettings = { pauseDelayMs: 2000, returnDelayMs: 1000, autoResume: false, sensitivity: 'balanced' };

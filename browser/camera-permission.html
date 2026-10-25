@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Allow camera · Stillpoint</title>
+    <link rel="icon" type="image/png" href="./icons/icon32.png" />
+  </head>
+  <body>
+    <main class="permission-page">
+      <header class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span>Stillpoint</header>
+      <section class="permission-card" aria-labelledby="permission-title">
+        <div class="camera-symbol" aria-hidden="true">
+          <svg viewBox="0 0 48 48" fill="none"><rect x="7" y="13" width="25" height="23" rx="5"></rect><path d="m32 20 9-5v19l-9-5"></path><circle cx="19.5" cy="24.5" r="5"></circle></svg>
+        </div>
+        <p class="eyebrow">CAMERA SETUP</p>
+        <h1 id="permission-title">Allow your camera</h1>
+        <p id="permission-description">Choose Allow in your browser’s camera prompt to enable head tracking in Stillpoint.</p>
+        <p id="permission-status" class="permission-status" role="status" aria-live="polite">Waiting for your browser…</p>
+        <div class="permission-actions">
+          <button id="permission-retry" class="button primary" type="button" hidden>Try again</button>
+          <button id="permission-settings" class="button outline" type="button" hidden>Open camera settings</button>
+          <button id="permission-close" class="button quiet" type="button">Close</button>
+        </div>
+      </section>
+      <p class="privacy-note">Video stays on this device.<br />Your microphone stays off.</p>
+    </main>
+    <script type="module" src="/src/extension/cameraPermissionPage.ts"></script>
+  </body>
+</html>

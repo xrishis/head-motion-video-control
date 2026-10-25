@@ -3,8 +3,9 @@ import { Camera, CameraOff, Check, ChevronRight, FlaskConical, LockKeyhole, Paus
 import Preferences from '../components/Preferences';
 import type { PreferencesValue } from '../components/Preferences';
 import { useCameraTracking } from '../tracking/useCameraTracking';
+import { readCameraPermission, requestCameraPermission } from './cameraPermission';
 import type { PoseState } from '../core/playbackPolicy';
-import { CHANNEL, DEFAULT_SETTINGS, epochNow, normalizeSettings } from './protocol';
+import { CHANNEL, DEFAULT_SETTINGS, EXTENSION_VERSION, epochNow, normalizeSettings } from './protocol';
 import type { ExtensionResponse, PanelRequest, TargetSession, VideoAction, VideoStatus } from './protocol';
 
 type Mode = 'off' | 'camera' | 'simulation';
@@ -24,6 +25,8 @@ export default function PanelApp() {
   const [simulatedPose, setSimulatedPose] = useState<PoseState>('facing');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [permissionPending, setPermissionPending] = useState(false);
+  const permissionRef = useRef<AbortController | null>(null);
   const targetRef = useRef<TargetSession | null>(null);
   const modeRef = useRef<Mode>('off');
   const sequence = useRef(0);
@@ -45,10 +48,28 @@ export default function PanelApp() {
   const tracking = useCameraTracking({ onPose: onCameraPose, onReset: resetTarget, sensitivity: preferences.sensitivity });
   stopCameraRef.current = tracking.stop;
 
+  const cancelPermission = useCallback(() => {
+    permissionRef.current?.abort();
+    permissionRef.current = null;
+    setPermissionPending(false);
+  }, []);
+
+  useEffect(() => {
+    // Closing/reloading an extension document does not run React unmount cleanup.
+    const cancelOnUnload = () => permissionRef.current?.abort();
+    window.addEventListener('pagehide', cancelOnUnload);
+    window.addEventListener('beforeunload', cancelOnUnload);
+    return () => {
+      window.removeEventListener('pagehide', cancelOnUnload);
+      window.removeEventListener('beforeunload', cancelOnUnload);
+    };
+  }, []);
+
   const applyResponse = useCallback((response: ExtensionResponse) => {
     if ('session' in response) {
       const target = response.session ?? null;
       if (target?.token !== targetRef.current?.token || !target?.connected) {
+        cancelPermission();
         if (modeRef.current !== 'off') { modeRef.current = 'off'; setMode('off'); stopCameraRef.current(); }
         sequence.current = 0;
       }
@@ -56,7 +77,7 @@ export default function PanelApp() {
       setSession(target);
     }
     if ('status' in response) setVideoStatus(response.status ?? null);
-  }, []);
+  }, [cancelPermission]);
 
   useEffect(() => {
     let mounted = true;
@@ -80,9 +101,10 @@ export default function PanelApp() {
     chrome.storage.onChanged.addListener(changed);
     return () => {
       mounted = false; window.clearInterval(timer); chrome.storage.onChanged.removeListener(changed);
+      cancelPermission();
       modeRef.current = 'off'; void request({ type: 'STOP' }); port.disconnect();
     };
-  }, [applyResponse]);
+  }, [applyResponse, cancelPermission]);
 
   useEffect(() => {
     if (mode !== 'simulation') return;
@@ -99,12 +121,31 @@ export default function PanelApp() {
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [tracking.stop]);
 
-  const stop = () => { modeRef.current = 'off'; setMode('off'); tracking.stop(); void request({ type: 'STOP' }); };
-  const startCamera = () => {
-    if (!targetRef.current?.connected) { setError('Select your video tab and click the Stillpoint toolbar icon first.'); return; }
-    setError(''); modeRef.current = 'camera'; setMode('camera'); void tracking.start();
+  const stop = () => { cancelPermission(); modeRef.current = 'off'; setMode('off'); tracking.stop(); void request({ type: 'STOP' }); };
+  const startCamera = async () => {
+    const target = targetRef.current;
+    if (!target?.connected) { setError('Select your video tab and click the Stillpoint toolbar icon first.'); return; }
+    if (permissionRef.current) return;
+    const controller = new AbortController();
+    permissionRef.current = controller;
+    setError(''); setPermissionPending(true);
+    modeRef.current = 'off'; setMode('off'); tracking.stop();
+    try {
+      const permission = await readCameraPermission();
+      if (controller.signal.aborted) return;
+      if (permission !== 'granted') await requestCameraPermission({ signal: controller.signal, parentWindowId: target.windowId });
+      // Consent can arrive after cancellation, a tab change, or closing this panel.
+      if (controller.signal.aborted || targetRef.current?.token !== target.token || !targetRef.current.connected) return;
+      if (document.hidden) { setError('Camera access is allowed. Return to the video tab and click Enable camera to begin.'); return; }
+      modeRef.current = 'camera'; setMode('camera'); void tracking.start();
+    } catch (reason) {
+      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : 'The camera permission window could not open. Try again.');
+    } finally {
+      if (permissionRef.current === controller) { permissionRef.current = null; setPermissionPending(false); }
+    }
   };
   const startSimulation = () => {
+    cancelPermission();
     modeRef.current = 'off'; tracking.stop();
     simulatedRef.current = 'facing'; setSimulatedPose('facing');
     modeRef.current = 'simulation'; setMode('simulation'); setError('');
@@ -136,12 +177,12 @@ export default function PanelApp() {
   };
 
   const cameraVisible = mode === 'camera' && (tracking.status === 'tracking' || tracking.status === 'calibrating');
-  const cameraLabel = mode === 'simulation' ? 'Simulation mode' : mode === 'off' ? 'Camera off' : tracking.status === 'tracking' ? poseLabels[tracking.pose] : tracking.status === 'calibrating' ? 'Calibrating your position' : tracking.status === 'error' ? 'Camera unavailable' : tracking.status === 'off' ? 'Camera off' : 'Preparing your camera…';
+  const cameraLabel = permissionPending ? 'Waiting for camera permission…' : mode === 'simulation' ? 'Simulation mode' : mode === 'off' ? 'Camera off' : tracking.status === 'tracking' ? poseLabels[tracking.pose] : tracking.status === 'calibrating' ? 'Calibrating your position' : tracking.status === 'error' ? 'Camera unavailable' : tracking.status === 'off' ? 'Camera off' : 'Preparing your camera…';
   let host = '';
   try { host = session?.url ? new URL(session.url).hostname : ''; } catch { /* Unsupported URLs have no displayed host. */ }
 
   return <main className="extension-panel">
-    <header className="extension-header"><a className="brand" href="https://xrishis.github.io/head-motion-video-control/" target="_blank" rel="noreferrer"><span className="brand-mark"><i /><i /></span><span>Stillpoint</span></a><span className="extension-version">Extension · 0.2</span></header>
+    <header className="extension-header"><a className="brand" href="https://xrishis.github.io/head-motion-video-control/" target="_blank" rel="noreferrer"><span className="brand-mark"><i /><i /></span><span>Stillpoint</span></a><span className="extension-version">Extension · {EXTENSION_VERSION}</span></header>
     <div className="extension-intro"><h1>Your video, at your pace.</h1><p>A little less clicking. A little more watching.</p></div>
     <section className="target-section" aria-labelledby="target-title">
       <div className="section-label"><h2 id="target-title">Selected video tab</h2><span className={`connection-dot ${session?.connected ? 'connected' : ''}`} /></div>
@@ -154,9 +195,9 @@ export default function PanelApp() {
     </section>
     <section className="extension-camera" aria-labelledby="camera-heading">
       <h2 id="camera-heading">Your camera assistant</h2>
-      <div className={`tracking-status ${mode !== 'off' ? 'live' : ''}`}><span />{cameraLabel}</div>
+      <div className={`tracking-status ${cameraVisible || mode === 'simulation' ? 'live' : ''}`}><span />{cameraLabel}</div>
       <div className={`camera-preview ${cameraVisible ? 'has-camera' : ''}`}><video ref={tracking.videoRef} muted autoPlay playsInline aria-label="Local camera preview" className={cameraVisible ? '' : 'hidden-preview'} />{!cameraVisible && <div className="camera-placeholder">{mode === 'simulation' ? <FlaskConical size={31} strokeWidth={1.4} /> : tracking.status === 'error' ? <CameraOff size={34} strokeWidth={1.4} /> : <Camera size={35} strokeWidth={1.4} />}<p>{mode === 'simulation' ? 'A camera-free test drive' : 'Ready when you are'}</p></div>}{mode === 'camera' && tracking.status === 'calibrating' && <div className="calibration-overlay"><span>Face the screen and hold comfortably still.</span><div className="progress-track"><i style={{ width: `${tracking.progress * 100}%` }} /></div></div>}{cameraVisible && <span className="preview-label"><ShieldCheck size={11} /> On-device processing</span>}</div>
-      {mode === 'off' || (mode === 'camera' && (tracking.status === 'error' || tracking.status === 'off')) ? <><button className="button primary full" onClick={startCamera} disabled={!session?.connected}>Enable camera</button><p className="camera-privacy">Camera images and landmarks stay on this device.</p><button className="button outline full" onClick={startSimulation} disabled={!session?.connected}>Try without a camera</button></> : <><button className="button primary full" onClick={stop}><CameraOff size={15} /> Stop assistance</button>{mode === 'camera' && <button className="text-button centered" onClick={tracking.recalibrate}><RefreshCw size={12} /> Recalibrate</button>}</>}
+      {permissionPending ? <><p className="camera-guidance" role="status">Choose Allow in the camera permission window. You will return here automatically.</p><button className="button outline full" onClick={stop}>Cancel camera request</button></> : mode === 'off' || (mode === 'camera' && (tracking.status === 'error' || tracking.status === 'off')) ? <><button className="button primary full" onClick={() => void startCamera()} disabled={!session?.connected}>Enable camera</button><p className="camera-privacy">Camera images and landmarks stay on this device.</p><button className="button outline full" onClick={startSimulation} disabled={!session?.connected}>Try without a camera</button></> : <><button className="button primary full" onClick={stop}><CameraOff size={15} /> Stop assistance</button>{mode === 'camera' && <button className="text-button centered" onClick={tracking.recalibrate}><RefreshCw size={12} /> Recalibrate</button>}</>}
       {mode === 'simulation' && <div className="simulation-controls"><p className="simulation-disclaimer">Simulated direction · no camera</p><div className="pose-buttons">{(['facing', 'away', 'absent'] as const).map(pose => <button key={pose} aria-pressed={simulatedPose === pose} className={simulatedPose === pose ? 'selected' : ''} onClick={() => { simulatedRef.current = pose; setSimulatedPose(pose); }}>{pose === 'facing' ? 'Face screen' : pose === 'away' ? 'Look away' : 'Leave frame'}</button>)}</div></div>}
       {mode === 'camera' && tracking.message && tracking.status !== 'tracking' && <p className={tracking.status === 'error' ? 'camera-error' : 'camera-guidance'}>{tracking.message}</p>}
     </section>

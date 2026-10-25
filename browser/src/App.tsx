@@ -118,7 +118,7 @@ export default function App() {
         </aside>
       </div>
     </main>
-    <footer><span className="footer-note"><Check size={13} />You are always in control. Manual pauses stay paused.</span><a className="extension-download" href="https://github.com/xrishis/head-motion-video-control/releases/download/extension-v0.2.0/stillpoint-extension-v0.2.0.zip">Download Chrome/Edge extension <ArrowUpRight size={12} /></a></footer>
+    <footer><span className="footer-note"><Check size={13} />You are always in control. Manual pauses stay paused.</span><a className="extension-download" href="https://github.com/xrishis/head-motion-video-control/releases/download/extension-v0.2.1/stillpoint-extension-v0.2.1.zip">Download Chrome/Edge extension <ArrowUpRight size={12} /></a></footer>
     <dialog ref={dialogRef} className="help-dialog" onCancel={() => setHelp(false)} onClick={event => { if (event.target === dialogRef.current) setHelp(false); }}>
       <div className="dialog-title"><span className="dialog-icon"><CircleHelp size={23} /></span><button className="icon-button" aria-label="Close help" onClick={() => setHelp(false)}><X size={20} /></button></div>
       <h2>Learn at your own pace.</h2><p>Stillpoint uses your head direction as a playback preference. It does not measure attention or understanding.</p>

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Stillpoint — hands-free video",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Optional head-controlled pause and resume for a selected video tab. Local camera processing and learner-controlled playback.",
   "minimum_chrome_version": "116",
   "permissions": ["activeTab", "scripting", "sidePanel", "storage"],

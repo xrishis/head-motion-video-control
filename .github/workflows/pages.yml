@@ -37,7 +37,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: stillpoint-extension
-          path: browser/artifacts/stillpoint-extension-v0.2.0.zip
+          path: browser/artifacts/stillpoint-extension-v0.2.1.zip
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:

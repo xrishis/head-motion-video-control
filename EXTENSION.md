@@ -2,7 +2,7 @@
 
 The extension connects Stillpoint's local head tracker to one selected video tab. It is separate from the standalone sample-video website.
 
-**Download:** [Stillpoint extension v0.2.0 ZIP](https://github.com/xrishis/head-motion-video-control/releases/download/extension-v0.2.0/stillpoint-extension-v0.2.0.zip)
+**Download:** [Stillpoint extension v0.2.1 ZIP](https://github.com/xrishis/head-motion-video-control/releases/download/extension-v0.2.1/stillpoint-extension-v0.2.1.zip)
 
 ## Install on desktop Chrome or Edge
 
@@ -18,18 +18,24 @@ This package uses the developer installation flow. It is not published in the Ch
 
 1. Open the video website and start its video normally once. Browsers can reject subsequent automatic playback until the website has received a user gesture.
 2. Click Stillpoint's toolbar icon on that tab. The side panel displays the selected tab and video status. The optional shortcut is Alt+Shift+S; other shortcuts can conflict.
-3. Keep the side panel open beside the video. Choose **Enable camera**, allow camera access, face the screen and hold comfortably still to calibrate.
+3. Keep the side panel open beside the video. Choose **Enable camera**. A small permission window opens automatically the first time; choose **Allow** in the browser's camera prompt. The window closes and camera calibration starts in the side panel. Face the screen and hold comfortably still.
 4. Turn away for the chosen delay to pause. **Resume automatically** is off by default. Enable it to resume an assistant-paused video after a confident return.
 5. **Try without a camera** sends clearly labelled simulated head positions through the same cross-tab playback path. It does not estimate your face.
 6. **Stop assistance** disables camera/simulation and clears automatic-resume ownership. Normal site controls continue working.
 
 Changing tabs, navigating, closing the panel, or losing fresh observations suspends assistance and clears stale resume ownership. Click the toolbar icon again to select/reconnect a tab. Manual pauses and seeking do not instruct automatic resume.
 
+## Updating from 0.2.0
+
+Extract the new ZIP into the same permanent extension folder, replacing its existing files. Open `chrome://extensions` or `edge://extensions` and click **Reload** on Stillpoint. Confirm the panel says **Extension · 0.2.1**, reconnect your video tab, and click **Enable camera**.
+
+The permission window is needed because Chromium side panels cannot display the initial camera prompt. Once access is granted, later camera starts reuse that permission. Closing the window or choosing **Cancel camera request** leaves the camera off. If you previously explicitly blocked access, Chrome/Edge or Windows may require you to undo that block once; extensions cannot reset a user's browser or system permission. The permission window explains the blocked state and offers retry and a shortcut to camera settings. A dismissed request in the old side panel is not itself a permanent block.
+
 ## Site access and privacy
 
 Required permissions: `activeTab`, `scripting`, `sidePanel`, `storage`. No website access is granted at installation. Clicking the toolbar grants temporary access to that selected tab. **Allow this site for reconnects** optionally requests access to that site's origin; granting it is your choice.
 
-Camera access occurs only after Enable camera, with video enabled and microphone disabled. MediaPipe JavaScript, Wasm and model files are packaged locally. Camera frames/landmarks are not stored or uploaded. Preferences stay in local extension storage; selected-target/session state uses session storage. There is no backend or analytics service.
+Camera access occurs only after Enable camera, with video enabled and microphone disabled. The permission window briefly opens and immediately stops its temporary camera stream before handing off to the side panel. MediaPipe JavaScript, Wasm and model files are packaged locally. Camera frames/landmarks are not stored or uploaded. Preferences stay in local extension storage; selected-target/session state uses session storage. There is no backend or analytics service.
 
 ## Compatibility
 
@@ -51,6 +57,6 @@ npx playwright install chromium
 npm run test:extension
 ```
 
-Unpacked package: `browser/extension-dist/`. ZIP: `browser/artifacts/stillpoint-extension-v0.2.0.zip`. Generated folders are ignored by Git. The ZIP root includes manifest.json, panel/background/content bundles, model, Wasm, icons, notices and installation instructions.
+Unpacked package: `browser/extension-dist/`. ZIP: `browser/artifacts/stillpoint-extension-v0.2.1.zip`. Generated folders are ignored by Git. The ZIP root includes manifest.json, panel/background/content bundles, model, Wasm, icons, notices and installation instructions.
 
 Extension E2E loads the actual package in an isolated persistent Chromium profile, invokes the real toolbar action and drives the actual side panel over CDP. `STILLPOINT_CHROMIUM_EXECUTABLE` can override the executable for local runtime issues. This machine's bundled full Chromium had a Windows SxS launch issue; a byte-for-byte temporary copy was used successfully. Normal CI uses bundled Playwright Chromium. Tests never install into a person's existing browser profile.

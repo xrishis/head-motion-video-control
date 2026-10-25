@@ -12,13 +12,13 @@ let panel: SidePanelDriver;
 let profile: string;
 let extensionId: string;
 
-test.beforeEach(async () => {
+test.beforeEach(async ({}, testInfo) => {
   profile = await mkdtemp(path.join(tmpdir(), 'stillpoint-extension-e2e-'));
   const extension = path.resolve('extension-dist');
   const executable = process.env.STILLPOINT_CHROMIUM_EXECUTABLE;
   context = await chromium.launchPersistentContext(profile, {
-    channel: 'chromium', executablePath: executable, headless: true, viewport: { width: 1440, height: 1000 },
-    args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`, '--enable-unsafe-extension-debugging', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--enable-unsafe-swiftshader'],
+    channel: 'chromium', executablePath: executable, headless: process.env.STILLPOINT_EXTENSION_HEADED !== '1', viewport: { width: 1440, height: 1000 },
+    args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`, '--enable-unsafe-extension-debugging', '--use-fake-device-for-media-stream', ...(testInfo.title.includes('native camera permission') ? [] : ['--use-fake-ui-for-media-stream']), '--enable-unsafe-swiftshader'],
   });
   worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
   extensionId = new URL(worker.url()).host;
@@ -52,6 +52,87 @@ async function openPanel() {
 }
 
 const isPaused = () => page.locator('video').evaluate(video => (video as HTMLVideoElement).paused);
+
+test('first-time native camera permission opens a window and cancellation leaves the camera off', async () => {
+  await openPanel();
+  const created = context.waitForEvent('page', { timeout: 8000 });
+  await panel.click('.extension-camera > button.primary');
+  const permission = await created;
+  await expect(permission).toHaveURL(new RegExp(`^chrome-extension://${extensionId}/camera-permission.html`));
+  await expect(permission.locator('#permission-title')).toContainText(/camera/i);
+  expect(await permission.evaluate(() => document.hasFocus())).toBe(true);
+  expect(await panel.evaluate('document.querySelector("video").srcObject')).toBeNull();
+  if (process.env.STILLPOINT_EXTENSION_HEADED === '1') {
+    const cdp = await context.browser()!.newBrowserCDPSession();
+    await expect.poll(async () => {
+      const result = await cdp.send('Browser.getHistograms', { query: 'Permissions.Prompt.VideoCapture.ShownInActiveBrowser' });
+      return result.histograms.find(item => item.name === 'Permissions.Prompt.VideoCapture.ShownInActiveBrowser')?.count ?? 0;
+    }).toBeGreaterThan(0);
+    await expect(permission.locator('#permission-title')).toHaveText('Allow your camera');
+    expect(await permission.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await permission.screenshot({ path: path.join(tmpdir(), 'stillpoint-camera-permission.png') });
+    await cdp.detach();
+  }
+  await permission.close();
+  await expect.poll(() => panel.evaluate<string>('document.querySelector(".tracking-status")?.textContent')).toBe('Camera off');
+  await expect.poll(() => panel.evaluate<string>('document.body.textContent')).toContain('Camera permission window was closed');
+  expect(await panel.evaluate('document.querySelector("video").srcObject')).toBeNull();
+  expect(await worker.evaluate(async () => {
+    const saved = (await chrome.storage.session.get('stillpointSession')).stillpointSession as { connected: boolean };
+    return saved.connected;
+  })).toBe(true);
+});
+
+test('native camera permission grant returns to calibration and subsequent starts reuse consent', async () => {
+  await openPanel();
+  const created = context.waitForEvent('page', { timeout: 8000 });
+  await panel.click('.extension-camera > button.primary');
+  const permission = await created;
+  await expect(permission).toHaveURL(new RegExp(`^chrome-extension://${extensionId}/camera-permission.html`));
+  // Headless Chrome denies unanswered native prompts. Model the user's Allow choice
+  // only in this isolated synthetic-device profile, then retry the real popup request.
+  await expect(permission.getByRole('button', { name: 'Try again', exact: true })).toBeVisible();
+  // CDP treats chrome-extension origins as opaque, so the permission override is
+  // scoped to this disposable browser context rather than an origin pattern.
+  await context.grantPermissions(['camera']);
+  await permission.getByRole('button', { name: 'Try again', exact: true }).click();
+  await expect.poll(() => permission.isClosed()).toBe(true);
+  await expect.poll(() => panel.evaluate<string>('document.querySelector(".tracking-status")?.textContent'), { timeout: 35000 }).toBe('Calibrating your position');
+  await panel.evaluate('window.testTrack = document.querySelector("video").srcObject.getVideoTracks()[0]');
+  await panel.click('.extension-camera > button.primary');
+  expect(await panel.evaluate<string>('window.testTrack.readyState')).toBe('ended');
+  const pages = context.pages().length;
+  await panel.click('.extension-camera > button.primary');
+  await expect.poll(() => panel.evaluate<string>('document.querySelector(".tracking-status")?.textContent'), { timeout: 35000 }).toBe('Calibrating your position');
+  expect(context.pages()).toHaveLength(pages);
+  expect(panel.exceptions).toEqual([]);
+});
+
+test('native camera permission request is cancelled when the selected video tab changes', async () => {
+  await openPanel();
+  const created = context.waitForEvent('page', { timeout: 8000 });
+  await panel.click('.extension-camera > button.primary');
+  const permission = await created;
+  await expect(permission).toHaveURL(new RegExp(`^chrome-extension://${extensionId}/camera-permission.html`));
+  const other = await context.newPage();
+  await other.goto('http://127.0.0.1:5173/');
+  await other.bringToFront();
+  await expect.poll(() => permission.isClosed()).toBe(true);
+  await expect.poll(() => panel.evaluate<string>('document.querySelector(".tracking-status")?.textContent')).toBe('Camera off');
+  expect(await panel.evaluate('document.querySelector("video").srcObject')).toBeNull();
+});
+
+test('native camera permission window closes when the initiating panel reloads', async () => {
+  await openPanel();
+  const created = context.waitForEvent('page', { timeout: 8000 });
+  await panel.click('.extension-camera > button.primary');
+  const permission = await created;
+  await expect(permission).toHaveURL(new RegExp(`^chrome-extension://${extensionId}/camera-permission.html`));
+  await panel.send('Page.reload');
+  await expect.poll(() => permission.isClosed()).toBe(true);
+  await expect.poll(() => panel.evaluate<string>('document.querySelector(".tracking-status")?.textContent')).toBe('Camera off');
+  expect(await panel.evaluate('document.querySelector("video").srcObject')).toBeNull();
+});
 
 test('actual toolbar grants activeTab, opens the panel and controls a different page without installed host grants', async () => {
   const origins = await worker.evaluate(async () => (await chrome.permissions.getAll()).origins ?? []);

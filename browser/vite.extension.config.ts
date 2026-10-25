@@ -11,7 +11,7 @@ export default defineConfig({
     outDir: 'extension-dist',
     emptyOutDir: true,
     rollupOptions: {
-      input: { panel: resolve('panel.html'), background: resolve('src/extension/background.ts') },
+      input: { panel: resolve('panel.html'), 'camera-permission': resolve('camera-permission.html'), background: resolve('src/extension/background.ts') },
       output: { entryFileNames: chunk => chunk.name === 'background' ? 'background.js' : 'assets/[name]-[hash].js' },
     },
   },
